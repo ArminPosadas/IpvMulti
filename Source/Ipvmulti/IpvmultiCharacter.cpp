@@ -164,7 +164,7 @@ void AIpvmultiCharacter::OnRep_CurrentHealth()
 	OnHealthUpdate();
 }
 
-void AIpvmultiCharacter::OnHealthUpdate()
+void AIpvmultiCharacter::OnHealthUpdate_Implementation()
 {
 	if (IsLocallyControlled())
 	{

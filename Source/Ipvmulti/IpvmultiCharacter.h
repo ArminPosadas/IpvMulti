@@ -120,7 +120,7 @@ protected:
 	
 	UFUNCTION()
 	void OnRep_CurrentHealth();
-	
+	UFUNCTION(BlueprintNativeEvent, Category="Health")
 	void OnHealthUpdate();
 };
 
