@@ -182,7 +182,7 @@ void AIpvmultiCharacter::AddAmmo(int32 Amount)
 {
     if (GetLocalRole() == ROLE_Authority)
     {
-        CurrentAmmo = FMath::Clamp(CurrentAmmo + Amount, 0, MaxAmmo);
+        CurrentAmmo = MaxAmmo;
         OnAmmoUpdated();
     }
 }

@@ -6,6 +6,7 @@
 AAmmoPickup::AAmmoPickup()
 {
 	PrimaryActorTick.bCanEverTick = false;
+	bReplicates = true;
 
 	CollisionComponent = CreateDefaultSubobject<USphereComponent>(TEXT("CollisionComponent"));
 	CollisionComponent->InitSphereRadius(50.0f);

@@ -2,15 +2,14 @@
 
 #include "CoreMinimal.h"
 #include "Blueprint/UserWidget.h"
-#include "PlayerUI.generated.h"
+#include "MyAmmoWidget.generated.h"
 
 UCLASS()
-class IPVMULTI_API UPlayerUI : public UUserWidget
+class IPVMULTI_API UMyAmmoWidget : public UUserWidget
 {
 	GENERATED_BODY()
 
 public:
-
 	UFUNCTION(BlueprintImplementableEvent, Category = "UI")
-	void UpdateHealth(float CurrentHealth, float MaxHealth);
+	void UpdateAmmoCount(int32 CurrentAmmo, int32 MaxAmmo);
 };
