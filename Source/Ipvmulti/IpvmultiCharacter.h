@@ -146,4 +146,27 @@ protected:
     
     UFUNCTION(BlueprintNativeEvent, Category="Health")
     void OnHealthUpdate();
+
+    UFUNCTION()
+    void StartRagdoll();
+    void ShowGameOverScreen();
+    void DisableCharacterCollision();
+
+    UPROPERTY(EditDefaultsOnly, Category = "UI")
+    TSubclassOf<class UUserWidget> GameOverWidgetClass;
+    
+    UPROPERTY()
+    class UUserWidget* GameOverWidget;
+
+    UPROPERTY(ReplicatedUsing = OnRep_IsRagdoll)
+    bool bIsRagdoll;
+    
+    UFUNCTION()
+    void OnRep_IsRagdoll();
+    
+    UFUNCTION(Server, Reliable)
+    void ServerStartRagdoll();
+
+    UFUNCTION(BlueprintCallable, Category = "UI")
+    void HideUI();
 };

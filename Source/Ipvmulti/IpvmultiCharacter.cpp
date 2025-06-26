@@ -11,6 +11,8 @@
 #include "Net/UnrealNetwork.h"
 #include "Engine/Engine.h"
 #include "ThirdPersonMPProjectile.h"
+#include "Components/SkeletalMeshComponent.h"
+#include "Blueprint/UserWidget.h"
 
 DEFINE_LOG_CATEGORY(LogTemplateCharacter);
 
@@ -72,9 +74,10 @@ AIpvmultiCharacter::AIpvmultiCharacter()
 void AIpvmultiCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
     Super::GetLifetimeReplicatedProps(OutLifetimeProps);
-
+    
     DOREPLIFETIME(AIpvmultiCharacter, CurrentHealth);
     DOREPLIFETIME(AIpvmultiCharacter, CurrentAmmo);
+    DOREPLIFETIME(AIpvmultiCharacter, bIsRagdoll);
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -189,6 +192,7 @@ void AIpvmultiCharacter::AddAmmo(int32 Amount)
 
 void AIpvmultiCharacter::OnHealthUpdate_Implementation()
 {
+    bReplicates = true;
     // Client-specific functionality
     if (IsLocallyControlled())
     {
@@ -199,6 +203,10 @@ void AIpvmultiCharacter::OnHealthUpdate_Implementation()
         {
             FString deathMessage = FString::Printf(TEXT("You have been killed."));
             GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, deathMessage);
+            
+            StartRagdoll();
+            HideUI();
+            ShowGameOverScreen();
         }
     }
     
@@ -207,12 +215,13 @@ void AIpvmultiCharacter::OnHealthUpdate_Implementation()
     {
         FString healthMessage = FString::Printf(TEXT("%s now has %f health remaining."), *GetFName().ToString(), CurrentHealth);
         GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Blue, healthMessage);
-    }
 
-    // Functions that occur on all machines
-    /*
-        Any special functionality that should occur as a result of damage or death should be placed here.
-    */
+        if (CurrentHealth <= 0)
+        {
+            DisableInput(nullptr);
+            DisableCharacterCollision();  // Extra safety on server
+        }
+    }
 }
 
 void AIpvmultiCharacter::Move(const FInputActionValue& Value)
@@ -249,4 +258,97 @@ void AIpvmultiCharacter::Look(const FInputActionValue& Value)
         AddControllerYawInput(LookAxisVector.X);
         AddControllerPitchInput(LookAxisVector.Y);
     }
+}
+
+void AIpvmultiCharacter::StartRagdoll()
+{
+    // On server, call the server RPC
+    if (GetLocalRole() == ROLE_Authority)
+    {
+        bIsRagdoll = true;
+        OnRep_IsRagdoll(); // Call locally on server
+    }
+    else // On client, ask server to activate ragdoll
+    {
+        ServerStartRagdoll();
+    }
+}
+
+void AIpvmultiCharacter::ShowGameOverScreen()
+{
+    if (GameOverWidgetClass && IsLocallyControlled())
+    {
+        // Create and show the game over widget
+        GameOverWidget = CreateWidget<UUserWidget>(GetWorld(), GameOverWidgetClass);
+        if (GameOverWidget)
+        {
+            GameOverWidget->AddToViewport();
+            
+            // Show cursor and enable UI input
+            APlayerController* PC = Cast<APlayerController>(GetController());
+            if (PC)
+            {
+                PC->bShowMouseCursor = true;
+                PC->SetInputMode(FInputModeUIOnly());
+            }
+        }
+    }
+}
+
+void AIpvmultiCharacter::DisableCharacterCollision()
+{
+    bReplicates = true;
+    // Disable capsule collision
+    UCapsuleComponent* CapsuleComp = GetCapsuleComponent();
+    if (CapsuleComp)
+    {
+        CapsuleComp->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+        CapsuleComp->SetCollisionResponseToAllChannels(ECR_Ignore);
+    }
+
+    // Disable mesh collision (except for physics)
+    USkeletalMeshComponent* MeshComp = GetMesh();
+    if (MeshComp)
+    {
+        MeshComp->SetCollisionResponseToAllChannels(ECR_Ignore);
+        MeshComp->SetCollisionResponseToChannel(ECC_WorldStatic, ECR_Block);
+        MeshComp->SetCollisionResponseToChannel(ECC_WorldDynamic, ECR_Block);
+        MeshComp->SetCollisionResponseToChannel(ECC_PhysicsBody, ECR_Block);
+    }
+
+    // Disable character movement
+    UCharacterMovementComponent* MovementComp = GetCharacterMovement();
+    if (MovementComp)
+    {
+        MovementComp->StopMovementImmediately();
+        MovementComp->DisableMovement();
+    }
+}
+
+void AIpvmultiCharacter::ServerStartRagdoll_Implementation()
+{
+    bIsRagdoll = true;
+}
+
+void AIpvmultiCharacter::OnRep_IsRagdoll()
+{
+    if (bIsRagdoll)
+    {
+        // Enable physics simulation on the mesh
+        USkeletalMeshComponent* MeshComp = GetMesh();
+        if (MeshComp)
+        {
+            MeshComp->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+            MeshComp->SetSimulatePhysics(true);
+            MeshComp->SetAllBodiesSimulatePhysics(true);
+            MeshComp->WakeAllRigidBodies();
+        }
+        
+        DisableCharacterCollision();
+    }
+}
+
+void AIpvmultiCharacter::HideUI()
+{
+    if (!IsLocallyControlled()) return;
 }
