@@ -96,6 +96,9 @@ public:
     UFUNCTION(BlueprintCallable, Category="Ammo")
     void AddAmmo(int32 Amount);
 
+    UPROPERTY(BlueprintReadOnly, Category="Gameplay")
+    bool bIsCarryingObjective;
+
 protected:
     
     UPROPERTY(EditDefaultsOnly, Category="Gameplay|Projectile")
