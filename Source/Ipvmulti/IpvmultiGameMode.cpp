@@ -1,6 +1,8 @@
 // Copyright Epic Games, Inc. All Rights Reserved.
 
 #include "IpvmultiGameMode.h"
+
+#include "EditorCategoryUtils.h"
 #include "IpvmultiCharacter.h"
 #include "UObject/ConstructorHelpers.h"
 
@@ -11,5 +13,14 @@ AIpvmultiGameMode::AIpvmultiGameMode()
 	if (PlayerPawnBPClass.Class != NULL)
 	{
 		DefaultPawnClass = PlayerPawnBPClass.Class;
+	}
+}
+
+void AIpvmultiGameMode::CompleteMission(APawn* Pawn)
+{
+	if (Pawn == nullptr) return;
+	{
+		Pawn->DisableInput(nullptr);
+		OnMissionCompleted(Pawn);
 	}
 }

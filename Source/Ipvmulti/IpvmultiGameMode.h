@@ -13,6 +13,11 @@ class AIpvmultiGameMode : public AGameModeBase
 
 public:
 	AIpvmultiGameMode();
+
+	void CompleteMission(APawn* Pawn);
+
+	UFUNCTION(BlueprintImplementableEvent, Category="GameMode")
+	void OnMissionCompleted(APawn* Pawn);
 };
 
 
