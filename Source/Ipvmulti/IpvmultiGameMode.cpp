@@ -4,6 +4,7 @@
 
 #include "EditorCategoryUtils.h"
 #include "IpvmultiCharacter.h"
+#include "Kismet/GameplayStatics.h"
 #include "UObject/ConstructorHelpers.h"
 
 AIpvmultiGameMode::AIpvmultiGameMode()
@@ -21,6 +22,21 @@ void AIpvmultiGameMode::CompleteMission(APawn* Pawn)
 	if (Pawn == nullptr) return;
 	{
 		Pawn->DisableInput(nullptr);
+		OnMissionCompleted(Pawn);
+		if (SpectetatorViewClass)
+		{
+			TArray<AActor*> ReturnActors;
+			UGameplayStatics::GetAllActorsOfClass(this, SpectetatorViewClass, ReturnActors);
+			if (ReturnActors.Num() > 0)
+			{
+				AActor* NewViewTarget = ReturnActors[0];
+				APlayerController* PC = Cast<APlayerController>(Pawn->GetController());
+				if (PC)
+				{
+					PC -> SetViewTargetWithBlend(NewViewTarget, 1.0f,VTBlend_Cubic);
+				}
+			}
+		}
 		OnMissionCompleted(Pawn);
 	}
 }

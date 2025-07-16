@@ -7,6 +7,7 @@
 
 AObjectiveZone::AObjectiveZone()
 {
+	bReplicates = true;
 	OverlapComponent = CreateDefaultSubobject<UBoxComponent>(TEXT("OverlapComponent"));
 	OverlapComponent->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
 	OverlapComponent->SetCollisionResponseToChannels(ECR_Ignore);
