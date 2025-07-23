@@ -1,13 +1,27 @@
-﻿#include "EngineUtils.h"
-#include "Game/IpvMultiGameState.h"
+﻿#include "Game/ipvmultiGameState.h"
 
-void AIpvMultiGameState::MulticastOnMissionComplete_Implementation(APawn* InstigatorPawn, bool bMissionSuccess)
+#include "EngineUtils.h"
+#include "Player/IpvmultiPlayerController.h"
+
+void AIpvMultiGameState::MultiCastOnMissionCompleted_Implementation(APawn* instigatorPawn, bool bMissionSuccess)
 {
-	if (APlayerController* PC = GetWorld()->GetFirstPlayerController())
-	{
+
+	/*if (APlayerController PC = GetWorld()->GetFirstPlayerController())
 		if (APawn* Pawn = PC->GetPawn())
+			Pawn->DisableInput(nullptr);*/
+
+	for (FConstPlayerControllerIterator It=GetWorld()->GetPlayerControllerIterator(); It; It++)
+	{
+		AIpvmultiPlayerController* PC=Cast<AIpvmultiPlayerController>(It->Get());
+
+		if (PC)
 		{
-			Pawn->DisableInput(nullptr);
+			PC->OnMissionCompleted(instigatorPawn, bMissionSuccess);
+			APawn* Pawn =PC->GetPawn();
+			if (Pawn)
+			{
+				Pawn->DisableInput(nullptr);
+			}
 		}
 	}
 }

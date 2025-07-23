@@ -21,7 +21,7 @@ public:
 
 protected:
 	UPROPERTY(EditDefaultsOnly, Category="GameMode")
-	TSubclassOf<AActor> SpectetatorViewClass;
+	TSubclassOf<AActor> SpectatorViewClass;
 };
 
 

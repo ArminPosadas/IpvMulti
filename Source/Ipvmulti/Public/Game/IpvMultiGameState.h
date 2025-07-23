@@ -15,6 +15,7 @@ class IPVMULTI_API AIpvMultiGameState : public AGameStateBase
 	GENERATED_BODY()
 
 public:
-	void MulticastOnMissionComplete(APawn* InstigatorPawn, bool bMissionSuccess);
-	void MulticastOnMissionComplete_Implementation(APawn* InstigatorPawn, bool bMissionSuccess);
+	void MulticastOnMissionCompleted(APawn* Pawn, bool bMissionSuccess);
+	void MultiCastOnMissionCompleted_Implementation(APawn* InstigatorPawn, bool bMissionSuccess);
+	
 };

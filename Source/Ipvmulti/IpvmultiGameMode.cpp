@@ -3,7 +3,6 @@
 
 #include "EditorCategoryUtils.h"
 #include "IpvmultiCharacter.h"
-#include "Game/IpvMultiGameState.h"
 #include "Kismet/GameplayStatics.h"
 #include "UObject/ConstructorHelpers.h"
 
@@ -15,17 +14,17 @@ AIpvmultiGameMode::AIpvmultiGameMode()
 	{
 		DefaultPawnClass = PlayerPawnBPClass.Class;
 	}
-	GameStateClass = AIpvMultiGameState::StaticClass();
+	//GameStateClass = AIpvMultiGameState::StaticClass();
 }
 
 void AIpvmultiGameMode::CompleteMission(APawn* Pawn)
 {
 	if (Pawn == nullptr) return;
 	Pawn->DisableInput(nullptr);
-	if (SpectetatorViewClass)
+	if (SpectatorViewClass)
 	{
 		TArray<AActor*> ReturnActors;
-		UGameplayStatics::GetAllActorsOfClass(this, SpectetatorViewClass, ReturnActors);
+		UGameplayStatics::GetAllActorsOfClass(this, SpectatorViewClass, ReturnActors);
 		if (ReturnActors.Num() > 0)
 		{
 			AActor* NewViewTarget = ReturnActors[0];
@@ -36,10 +35,10 @@ void AIpvmultiGameMode::CompleteMission(APawn* Pawn)
 			}
 		}
 	}
-	/*AIpvMultiGameState* GS=GetGameState<AIpvmultiGameState>();
-	if (GS)
-	{
-		GS->MulticastOnMissionCompleted(Pawn, true);
-	}*/
+	//AIpvMultiGameState* GS=GetGameState<AIpvmultiGameState>();
+	//if (GS)
+	//{
+	//	GS->MulticastOnMissionCompleted(Pawn, true);
+	//}
 	OnMissionCompleted(Pawn);
 }
