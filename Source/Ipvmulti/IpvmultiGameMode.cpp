@@ -1,20 +1,20 @@
 
 #include "IpvmultiGameMode.h"
 
-#include "EditorCategoryUtils.h"
+#include "IpvmultiGameMode.h"
 #include "IpvmultiCharacter.h"
+#include "Game/IpvMultiGameState.h"
 #include "Kismet/GameplayStatics.h"
 #include "UObject/ConstructorHelpers.h"
 
 AIpvmultiGameMode::AIpvmultiGameMode()
 {
-	// set default pawn class to our Blueprinted character
 	static ConstructorHelpers::FClassFinder<APawn> PlayerPawnBPClass(TEXT("/Game/ThirdPerson/Blueprints/BP_ThirdPersonCharacter"));
 	if (PlayerPawnBPClass.Class != NULL)
 	{
 		DefaultPawnClass = PlayerPawnBPClass.Class;
 	}
-	//GameStateClass = AIpvMultiGameState::StaticClass();
+	GameStateClass = AIpvMultiGameState::StaticClass();
 }
 
 void AIpvmultiGameMode::CompleteMission(APawn* Pawn)
@@ -28,17 +28,20 @@ void AIpvmultiGameMode::CompleteMission(APawn* Pawn)
 		if (ReturnActors.Num() > 0)
 		{
 			AActor* NewViewTarget = ReturnActors[0];
-			APlayerController* PC = Cast<APlayerController>(Pawn->GetController());
-			if (PC)
+			for (FConstPlayerControllerIterator It=GetWorld()->GetPlayerControllerIterator(); It; It++)
 			{
-				PC -> SetViewTargetWithBlend(NewViewTarget, 1.0f,VTBlend_Cubic);
+				APlayerController*PC=It->Get();
+				if (PC)
+				{
+					PC->SetViewTargetWithBlend(NewViewTarget, 1.0f, VTBlend_Cubic);
+				}
 			}
 		}
 	}
-	//AIpvMultiGameState* GS=GetGameState<AIpvmultiGameState>();
-	//if (GS)
-	//{
-	//	GS->MulticastOnMissionCompleted(Pawn, true);
-	//}
+	AIpvMultiGameState* GS = GetGameState<AIpvMultiGameState>();
+	if (GS)
+	{
+		GS->MultiCastOnMissionComplete(Pawn, true);
+	}
 	OnMissionCompleted(Pawn);
 }

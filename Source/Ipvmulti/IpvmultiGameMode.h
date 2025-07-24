@@ -1,5 +1,3 @@
-// Copyright Epic Games, Inc. All Rights Reserved.
-
 #pragma once
 
 #include "CoreMinimal.h"
@@ -16,11 +14,11 @@ public:
 
 	void CompleteMission(APawn* Pawn);
 
-	UFUNCTION(BlueprintImplementableEvent, Category="GameMode")
+	UFUNCTION(BlueprintImplementableEvent, Category = "GameMode")
 	void OnMissionCompleted(APawn* Pawn);
 
 protected:
-	UPROPERTY(EditDefaultsOnly, Category="GameMode")
+	UPROPERTY(EditDefaultsOnly)
 	TSubclassOf<AActor> SpectatorViewClass;
 };
 
