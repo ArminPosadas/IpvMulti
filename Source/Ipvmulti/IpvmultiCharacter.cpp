@@ -190,6 +190,35 @@ void AIpvmultiCharacter::AddAmmo(int32 Amount)
     }
 }
 
+void AIpvmultiCharacter::StartRespawnTimer()
+{
+    if (GetLocalRole() == ROLE_Authority)
+    {
+        RespawnTimeRemaining = RespawnDuration;
+        
+        // Clear any existing timer
+        GetWorld()->GetTimerManager().ClearTimer(RespawnTimerHandle);
+        
+        // Set up the actual respawn timer
+        GetWorld()->GetTimerManager().SetTimer(
+            RespawnTimerHandle,
+            this,
+            &AIpvmultiCharacter::Respawn,
+            RespawnDuration,
+            false
+        );
+    }
+}
+
+float AIpvmultiCharacter::GetRemainingRespawnTime() const
+{
+    if (GetWorld()->GetTimerManager().IsTimerActive(RespawnTimerHandle))
+    {
+        return GetWorld()->GetTimerManager().GetTimerRemaining(RespawnTimerHandle);
+    }
+    return 0.f;
+}
+
 void AIpvmultiCharacter::OnHealthUpdate_Implementation()
 {
     bReplicates = true;
@@ -219,7 +248,8 @@ void AIpvmultiCharacter::OnHealthUpdate_Implementation()
         if (CurrentHealth <= 0)
         {
             DisableInput(nullptr);
-            DisableCharacterCollision();  // Extra safety on server
+            DisableCharacterCollision();
+            StartRespawnTimer(); // Start the respawn timer
         }
     }
 }
@@ -332,23 +362,162 @@ void AIpvmultiCharacter::ServerStartRagdoll_Implementation()
 
 void AIpvmultiCharacter::OnRep_IsRagdoll()
 {
+    USkeletalMeshComponent* MeshComp = GetMesh();
+    if (!MeshComp) return;
+    
     if (bIsRagdoll)
     {
         // Enable physics simulation on the mesh
-        USkeletalMeshComponent* MeshComp = GetMesh();
-        if (MeshComp)
-        {
-            MeshComp->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
-            MeshComp->SetSimulatePhysics(true);
-            MeshComp->SetAllBodiesSimulatePhysics(true);
-            MeshComp->WakeAllRigidBodies();
-        }
+        MeshComp->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+        MeshComp->SetSimulatePhysics(true);
+        MeshComp->SetAllBodiesSimulatePhysics(true);
+        MeshComp->WakeAllRigidBodies();
         
         DisableCharacterCollision();
+    }
+    else
+    {
+        // Disable physics simulation
+        MeshComp->SetSimulatePhysics(false);
+        MeshComp->SetAllBodiesSimulatePhysics(false);
+        MeshComp->PutAllRigidBodiesToSleep();
+        
+        // Reset mesh position relative to capsule
+        MeshComp->AttachToComponent(GetCapsuleComponent(), FAttachmentTransformRules::SnapToTargetIncludingScale);
+        MeshComp->SetRelativeLocation(FVector(0, 0, -GetCapsuleComponent()->GetScaledCapsuleHalfHeight()));
+        MeshComp->SetRelativeRotation(FRotator(0, -90.f, 0));
+        
+        // Force physics state update
+        MeshComp->SetPhysicsLinearVelocity(FVector::ZeroVector);
+        MeshComp->SetPhysicsAngularVelocityInDegrees(FVector::ZeroVector);
     }
 }
 
 void AIpvmultiCharacter::HideUI()
 {
     if (!IsLocallyControlled()) return;
+}
+
+void AIpvmultiCharacter::Respawn()
+{
+    GetWorld()->GetTimerManager().ClearTimer(TimerUpdateHandle);
+    
+    // Hide the timer display
+    if (IsLocallyControlled())
+    {
+        HideRespawnTimer();
+    }
+    // Remove widget locally first
+    if (IsLocallyControlled() && GameOverWidget)
+    {
+        GameOverWidget->RemoveFromParent();
+        GameOverWidget = nullptr;
+        
+        // Reset input mode
+        if (APlayerController* PC = Cast<APlayerController>(GetController()))
+        {
+            PC->bShowMouseCursor = false;
+            PC->SetInputMode(FInputModeGameOnly());
+        }
+    }
+    
+    // Then tell server to respawn us
+    if (GetLocalRole() < ROLE_Authority)
+    {
+        ServerRespawn();
+    }
+    else
+    {
+        ServerRespawn_Implementation();
+    }
+}
+
+void AIpvmultiCharacter::UpdateTimerDisplay()
+{
+    if (GetLocalRole() == ROLE_Authority)
+    {
+        RespawnTimeRemaining = GetWorld()->GetTimerManager().GetTimerRemaining(RespawnTimerHandle);
+        
+        // Update locally
+        if (IsLocallyControlled())
+        {
+            UpdateRespawnTimer(RespawnTimeRemaining);
+        }
+    }
+}
+
+void AIpvmultiCharacter::ServerRespawn_Implementation()
+{
+    // Reset health
+    CurrentHealth = MaxHealth;
+    OnHealthUpdate();
+    
+    // Reset ammo
+    CurrentAmmo = MaxAmmo;
+    OnAmmoUpdated();
+    
+    // Reset ragdoll state FIRST
+    bIsRagdoll = false;
+    OnRep_IsRagdoll(); // Force immediate update
+    
+    // Reset physics state before enabling collision
+    USkeletalMeshComponent* MeshComp = GetMesh();
+    if (MeshComp)
+    {
+        MeshComp->SetSimulatePhysics(false);
+        MeshComp->SetAllBodiesSimulatePhysics(false);
+        MeshComp->PutAllRigidBodiesToSleep();
+    }
+    
+    // Enable input and movement
+    EnableInput(Cast<APlayerController>(GetController()));
+    
+    // Re-enable collision
+    UCapsuleComponent* CapsuleComp = GetCapsuleComponent();
+    if (CapsuleComp)
+    {
+        CapsuleComp->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+        CapsuleComp->SetCollisionResponseToAllChannels(ECR_Block);
+    }
+    
+    // Re-enable character movement
+    UCharacterMovementComponent* MovementComp = GetCharacterMovement();
+    if (MovementComp)
+    {
+        MovementComp->SetMovementMode(EMovementMode::MOVE_Walking);
+        MovementComp->StopMovementImmediately();
+        MovementComp->ClearAccumulatedForces();
+    }
+    
+    // Reset position to spawn point
+    SetActorLocation(GetActorLocation());
+    
+    // Force widget cleanup on clients
+    if (GameOverWidget)
+    {
+        GameOverWidget->RemoveFromParent();
+        GameOverWidget = nullptr;
+    }
+    
+    // Notify clients to clean up their widgets
+    ClientRemoveWidget();
+    
+    // Force network update
+    ForceNetUpdate();
+}
+
+void AIpvmultiCharacter::ClientRemoveWidget_Implementation()
+{
+    if (GameOverWidget && IsLocallyControlled())
+    {
+        GameOverWidget->RemoveFromParent();
+        GameOverWidget = nullptr;
+        
+        // Reset input mode
+        if (APlayerController* PC = Cast<APlayerController>(GetController()))
+        {
+            PC->bShowMouseCursor = false;
+            PC->SetInputMode(FInputModeGameOnly());
+        }
+    }
 }

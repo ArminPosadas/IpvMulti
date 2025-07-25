@@ -99,6 +99,24 @@ public:
     UPROPERTY(BlueprintReadOnly, Category="Gameplay")
     bool bIsCarryingObjective;
 
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Respawn")
+    float RespawnDuration = 3.0f;  // Default value, editable in Blueprints
+    
+    UFUNCTION(BlueprintCallable, Category="Respawn")
+    void StartRespawnTimer();
+    
+    UFUNCTION(BlueprintPure, Category="Respawn")
+    float GetRemainingRespawnTime() const;
+
+    UFUNCTION(BlueprintImplementableEvent, Category = "UI")
+    void UpdateRespawnTimer(float TimeRemaining);
+
+    UFUNCTION(BlueprintImplementableEvent, Category = "UI")
+    void HideRespawnTimer();
+
+    UFUNCTION(BlueprintCallable, Category = "UI")
+    float GetRespawnTimeRemaining() const { return GetWorld()->GetTimerManager().GetTimerRemaining(RespawnTimerHandle); }
+
 protected:
     
     UPROPERTY(EditDefaultsOnly, Category="Gameplay|Projectile")
@@ -172,4 +190,21 @@ protected:
 
     UFUNCTION(BlueprintCallable, Category = "UI")
     void HideUI();
+
+    UFUNCTION()
+    void Respawn();
+
+    UFUNCTION(Server, Reliable)
+    void ServerRespawn();
+
+    UFUNCTION(Client, Reliable)
+    void ClientRemoveWidget();
+
+    void UpdateTimerDisplay();
+    
+    UPROPERTY(BlueprintReadOnly, Category = "UI")
+    float RespawnTimeRemaining;
+
+    FTimerHandle TimerUpdateHandle;
+    FTimerHandle RespawnTimerHandle;
 };
