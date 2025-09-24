@@ -13,6 +13,8 @@
 #include "ThirdPersonMPProjectile.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "Blueprint/UserWidget.h"
+#include "OnlineSubsystem.h"
+#include "Interfaces/OnlineSessionInterface.h"
 
 DEFINE_LOG_CATEGORY(LogTemplateCharacter);
 
@@ -69,6 +71,17 @@ AIpvmultiCharacter::AIpvmultiCharacter()
     //Initialize fire rate
     FireRate = 0.25f;
     bIsFiringWeapon = false;
+
+    IOnlineSubsystem* OnLineSubsystem = IOnlineSubsystem::Get();
+    if (OnlineSessionInterface)
+    {
+        OnlineSessionInterface = OnLineSubsystem->GetSessionInterface();
+        if (GEngine)
+        {
+            GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Purple,
+                FString::Printf(TEXT("Found Online Subsystem %s"), *OnLineSubsystem->GetSubsystemName().ToString()));
+        }
+    }
 }
 
 void AIpvmultiCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
