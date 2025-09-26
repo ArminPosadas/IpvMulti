@@ -3,6 +3,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
 #include "Interfaces/OnlineSessionDelegates.h"
+#include "Interfaces/OnlineSessionInterface.h"
 #include "Logging/LogMacros.h"
 #include "IpvmultiCharacter.generated.h"
 
@@ -210,9 +211,12 @@ protected:
     FTimerHandle RespawnTimerHandle;
 
 public:
-    TSharedPtr <class IOnlineSession, ESPMode::ThreadSafe> OnlineSessionInterface;
+    IOnlineSessionPtr OnlineSessionInterface;
 
 protected:
+    
+    UFUNCTION(BlueprintCallable)
+    void CreateGameSession();
     
     //Callbacks
     void OnCreateSessionComplete(FName sessionName, bool wasSuccess);
