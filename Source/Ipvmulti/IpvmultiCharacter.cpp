@@ -480,11 +480,35 @@ void AIpvmultiCharacter::CreateGameSession()
     SessionSettings->bAllowJoinViaPresence = true;
     SessionSettings->bShouldAdvertise = true;
     SessionSettings->bUsesPresence = true;
+
+    const ULocalPlayer* LocalPlayer= GetWorld()->GetFirstLocalPlayerFromController();
+
+    OnlineSessionInterface->CreateSession(*LocalPlayer->GetPreferredUniqueNetId(), NAME_GameSession, *SessionSettings);
 }
 
-void AIpvmultiCharacter::OnCreateSessionComplete(FName sessionName, bool wasSuccess)
+void AIpvmultiCharacter::OnCreateSessionComplete(FName SessionName, bool bWasSuccess)
 {
-    // Para regresar despues
+    if(bWasSuccess)
+    {
+        if (GEngine)
+        {
+            GEngine->AddOnScreenDebugMessage(
+                -1,
+                15.f,
+                FColor::Blue,
+                FString::Printf(TEXT("Created Session %s"), *SessionName.ToString())
+            );
+        }
+    }
+    else
+    {
+        GEngine->AddOnScreenDebugMessage(
+            -1,
+            15.f,
+            FColor::Red,
+            FString(TEXT("Create Session Failed"))
+        );
+    }
 }
 
 void AIpvmultiCharacter::ServerRespawn_Implementation()

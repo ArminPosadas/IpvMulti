@@ -219,7 +219,7 @@ protected:
     void CreateGameSession();
     
     //Callbacks
-    void OnCreateSessionComplete(FName sessionName, bool wasSuccess);
+    void OnCreateSessionComplete(FName SessionName, bool bWasSuccess);
 
 private:
 
