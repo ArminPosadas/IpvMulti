@@ -75,14 +75,14 @@ CreateSessionCompleteDelegate(FOnCreateSessionCompleteDelegate::CreateUObject(th
     FireRate = 0.25f;
     bIsFiringWeapon = false;
 
-    IOnlineSubsystem* OnLineSubsystem = IOnlineSubsystem::Get();
+    IOnlineSubsystem* OnlineSubsystem = IOnlineSubsystem::Get();
     if (OnlineSessionInterface)
     {
-        OnlineSessionInterface = OnLineSubsystem->GetSessionInterface();
+        OnlineSessionInterface = OnlineSubsystem->GetSessionInterface();
         if (GEngine)
         {
-            GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Purple,
-                FString::Printf(TEXT("Found Online Subsystem %s"), *OnLineSubsystem->GetSubsystemName().ToString()));
+            FString subsystemtest = FString::Printf(TEXT("Found Online Subsystem %s"), *OnlineSubsystem->GetSubsystemName().ToString());
+            GEngine->AddOnScreenDebugMessage(-1, 10.f, FColor::Purple, subsystemtest);
         }
     }
 }
