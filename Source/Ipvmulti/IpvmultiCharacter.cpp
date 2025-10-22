@@ -17,6 +17,7 @@
 #include "OnlineSubsystem.h"
 #include "Interfaces/OnlineSessionInterface.h"
 #include "OnlineSessionSettings.h"
+#include "Online/OnlineSessionNames.h" 
 
 DEFINE_LOG_CATEGORY(LogTemplateCharacter);
 
@@ -24,7 +25,8 @@ DEFINE_LOG_CATEGORY(LogTemplateCharacter);
 // AIpvmultiCharacter
 
 AIpvmultiCharacter::AIpvmultiCharacter():
-CreateSessionCompleteDelegate(FOnCreateSessionCompleteDelegate::CreateUObject(this, &ThisClass::OnCreateSessionComplete))
+CreateSessionCompleteDelegate(FOnCreateSessionCompleteDelegate::CreateUObject(this, &ThisClass::OnCreateSessionComplete)),
+FindSessionsCompleteDelegate(FOnFindSessionsCompleteDelegate::CreateUObject(this, &AIpvmultiCharacter::OnFindSessionsComplete))
 {
     // Set size for collision capsule
     GetCapsuleComponent()->InitCapsuleSize(42.f, 96.0f);
@@ -480,10 +482,45 @@ void AIpvmultiCharacter::CreateGameSession()
     SessionSettings->bAllowJoinViaPresence = true;
     SessionSettings->bShouldAdvertise = true;
     SessionSettings->bUsesPresence = true;
+    SessionSettings->bUseLobbiesIfAvailable = false;
+    SessionSettings->Set(FName("MatchType"),FString("FreeForAll"),EOnlineDataAdvertisementType::ViaOnlineServiceAndPing);
 
     const ULocalPlayer* LocalPlayer= GetWorld()->GetFirstLocalPlayerFromController();
 
     OnlineSessionInterface->CreateSession(*LocalPlayer->GetPreferredUniqueNetId(), NAME_GameSession, *SessionSettings);
+}
+
+void AIpvmultiCharacter::OnFindSessionsComplete(bool bWasSuccess)
+{
+    for (auto Result:SessionSearch->SearchResults)
+    {
+        FString Id = Result.GetSessionIdStr();
+        FString User = Result.Session.OwningUserName;
+        FString MatchType;
+        Result.Session.SessionSettings.Get(FName("MatchType"), MatchType);
+        
+        if(GEngine)
+        {
+            GEngine->AddOnScreenDebugMessage(
+                -1,
+                15.f,
+                FColor::Orange,
+                FString::Printf(TEXT("Id: %s, User: %s"), *Id, *User)
+            );
+        }
+        if (MatchType == FString("FreeForAll"))
+        {
+            if(GEngine)
+            {
+                GEngine->AddOnScreenDebugMessage(
+                    -1,
+                    15.f,
+                    FColor::Orange,
+                    FString::Printf(TEXT("Joining Match Type: %s"), *MatchType)
+                );
+            }
+        }
+    }
 }
 
 void AIpvmultiCharacter::OnCreateSessionComplete(FName SessionName, bool bWasSuccess)
@@ -499,6 +536,9 @@ void AIpvmultiCharacter::OnCreateSessionComplete(FName SessionName, bool bWasSuc
                 FString::Printf(TEXT("Created Session %s"), *SessionName.ToString())
             );
         }
+        UWorld* World = GetWorld();
+        if (!World) return;
+        //World->ServerlTravel("/Game/Scenes/MainGame");
     }
     else
     {
@@ -509,6 +549,22 @@ void AIpvmultiCharacter::OnCreateSessionComplete(FName SessionName, bool bWasSuc
             FString(TEXT("Create Session Failed"))
         );
     }
+}
+
+void AIpvmultiCharacter::JoinGameSession()
+{
+    if (!OnlineSessionInterface.IsValid()) return;
+    SessionSearch = MakeShareable(new FOnlineSessionSearch());
+    //delegate list
+    OnlineSessionInterface->AddOnFindSessionsCompleteDelegate_Handle(FindSessionsCompleteDelegate);
+    //find session
+    SessionSearch->MaxSearchResults = 10000;
+    SessionSearch->bIsLanQuery = false;
+    SessionSearch->QuerySettings.Set(SEARCH_PRESENCE, true, EOnlineComparisonOp::Equals);
+
+    const ULocalPlayer* LocalPlayer=GetWorld()->GetFirstLocalPlayerFromController();
+
+    OnlineSessionInterface->FindSessions(*LocalPlayer->GetPreferredUniqueNetId(),SessionSearch.ToSharedRef());
 }
 
 void AIpvmultiCharacter::ServerRespawn_Implementation()

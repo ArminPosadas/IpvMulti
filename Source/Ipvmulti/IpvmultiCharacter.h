@@ -217,12 +217,22 @@ protected:
     
     UFUNCTION(BlueprintCallable)
     void CreateGameSession();
+
+    void OnFindSessionsComplete(bool bWasSuccess);
     
     //Callbacks
     void OnCreateSessionComplete(FName SessionName, bool bWasSuccess);
+
+    UFUNCTION(BlueprintCallable)
+    void JoinGameSession();
 
 private:
 
     //Delegate
     FOnCreateSessionCompleteDelegate CreateSessionCompleteDelegate;
+    
+    FOnFindSessionsCompleteDelegate FindSessionsCompleteDelegate;
+
+    //SessionSearch
+    TSharedPtr<FOnlineSessionSearch> SessionSearch;
 };
